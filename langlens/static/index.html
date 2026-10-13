@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LangLens</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔎</text></svg>">
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #fff; --ink: #141414; --mute: #686660; --line: rgba(20,20,20,.1);
+    --accent: #1f6feb; --accent-soft: rgba(31,111,235,.12); --ok: #1a7f37; --warn: #9a6700;
+    --radius: 18px; --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111214; --card: #1a1b1e; --ink: #eeeeec; --mute: #a3a29d; --line: rgba(255,255,255,.1);
+      --accent: #58a6ff; --accent-soft: rgba(88,166,255,.15); --ok: #3fb950; --warn: #d29922; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -.03em; }
+  h1 span { color: var(--accent); }
+  .sub { color: var(--mute); margin: 4px 0 0; }
+  .tabs { display: flex; gap: 4px; padding: 4px; background: var(--card); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line); }
+  .tabs button { border: 0; background: none; color: var(--mute); font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 999px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: inset 0 0 0 1px var(--line); padding: 20px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; margin-top: 24px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  textarea { width: 100%; min-height: 220px; resize: vertical; border: 0; outline: 0; background: none; color: inherit;
+    font: 20px/1.5 var(--font); }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .meta { color: var(--mute); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip { border: 0; font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    background: var(--accent-soft); color: var(--accent); }
+  .chip:hover { filter: brightness(.95); }
+  .hero { display: flex; align-items: center; gap: 16px; }
+  .flag { font-size: 56px; line-height: 1; }
+  .lang-name { font-size: 28px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; }
+  .native { color: var(--mute); }
+  .ring { --p: 0; width: 64px; height: 64px; border-radius: 50%; margin-left: auto; flex: none; display: grid; place-items: center;
+    background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); transition: --p .4s; }
+  .ring b { width: 50px; height: 50px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-size: 13px; }
+  .bars { margin-top: 18px; display: grid; gap: 8px; }
+  .bar { display: grid; grid-template-columns: 26px minmax(0, 1fr) 48px; gap: 8px; align-items: center; font-size: 14px; }
+  .bar .track { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; position: relative; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 99px; transition: width .4s ease; }
+  .bar .label { display: flex; flex-direction: column; gap: 4px; }
+  .pct { text-align: right; font-variant-numeric: tabular-nums; color: var(--mute); }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+  .badge.warn { background: rgba(154,103,0,.12); color: var(--warn); }
+  .segs { margin-top: 16px; line-height: 2; }
+  .seg { padding: 2px 6px; border-radius: 6px; margin-right: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .seg small { font-weight: 700; margin-right: 4px; opacity: .7; }
+  h3 { margin: 18px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--mute); }
+  select, .btn { font: inherit; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: inherit; }
+  .btn { cursor: pointer; font-weight: 600; }
+  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .out { margin-top: 12px; min-height: 48px; font-size: 18px; }
+  .empty { color: var(--mute); padding: 40px 0; text-align: center; }
+  .quiz-phrase { font-size: clamp(22px, 4vw, 34px); font-weight: 600; letter-spacing: -.02em; margin: 8px 0 20px; }
+  .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .opts button { font: inherit; font-size: 18px; text-align: left; padding: 14px 16px; border-radius: 14px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--card); color: inherit; transition: transform .15s; }
+  .opts button:hover { transform: translateY(-2px); }
+  .opts button.right { border-color: var(--ok); background: rgba(26,127,55,.12); }
+  .opts button.wrong { border-color: #cf222e; background: rgba(207,34,46,.1); }
+  .score { display: flex; gap: 16px; color: var(--mute); }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Lang<span>Lens</span> 🔎</h1>
+      <p class="sub">Detect any of 60+ languages instantly — offline, as you type.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="detect">Detect</button>
+      <button role="tab" aria-selected="false" data-tab="quiz">Quiz</button>
+    </div>
+  </header>
+
+  <section id="tab-detect">
+    <div class="grid">
+      <div class="card">
+        <label for="text" class="meta">Type or paste text</label>
+        <textarea id="text" placeholder="Bonjour! నమస్కారం! こんにちは! kya haal hai?" autofocus></textarea>
+        <div class="row" style="justify-content: space-between">
+          <span class="meta" id="stats">0 characters</span>
+          <button class="btn" id="clear" type="button">Clear</button>
+        </div>
+        <div class="chips" id="samples" aria-label="Examples"></div>
+      </div>
+
+      <div class="card" aria-live="polite">
+        <div id="empty" class="empty">Your language will appear here ✨</div>
+        <div id="result" hidden>
+          <div class="hero">
+            <div class="flag" id="flag"></div>
+            <div>
+              <div class="lang-name" id="name"></div>
+              <div class="native" id="native"></div>
+            </div>
+            <div class="ring" id="ring"><b id="ringPct"></b></div>
+          </div>
+          <div class="row" style="margin-top: 10px" id="badges"></div>
+          <h3>Top candidates</h3>
+          <div class="bars" id="bars"></div>
+          <h3>Scripts</h3>
+          <div class="chips" id="scripts" style="margin-top: 0"></div>
+          <div id="mixedBox" hidden>
+            <h3>Sentence by sentence</h3>
+            <div class="segs" id="segs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px">
+      <div class="row">
+        <strong>Translate to</strong>
+        <select id="target" aria-label="Target language"></select>
+        <button class="btn primary" id="translate" type="button">Translate</button>
+        <button class="btn" id="speak" type="button" title="Read the translation aloud">🔊 Listen</button>
+        <button class="btn" id="copy" type="button">Copy</button>
+      </div>
+      <div class="out" id="out"></div>
+      <div class="meta" id="outMeta"></div>
+    </div>
+  </section>
+
+  <section id="tab-quiz" hidden>
+    <div class="card" style="margin-top: 24px">
+      <div class="score"><span>Score <b id="qScore">0</b></span><span>Streak <b id="qStreak">0</b> 🔥</span><span>Best <b id="qBest">0</b></span></div>
+      <div class="quiz-phrase" id="qPhrase">Loading…</div>
+      <div class="opts" id="qOpts"></div>
+      <div class="row" style="margin-top: 16px; justify-content: space-between">
+        <span class="meta" id="qMsg">Which language is this?</span>
+        <button class="btn primary" id="qNext" type="button" hidden>Next →</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SAMPLES = [
+  ["Telugu", "నమస్కారం, మీరు ఎలా ఉన్నారు?"],
+  ["Hinglish", "kya haal hai yaar, main theek hoon"],
+  ["Japanese", "猿も木から落ちる。"],
+  ["Spanish", "Más vale tarde que nunca."],
+  ["Mixed", "Hello everyone. Hola a todos, ¿qué tal? नमस्ते दोस्तों।"],
+  ["Russian", "Привет, как дела? У меня всё хорошо."],
+  ["Arabic", "مرحبا، كيف حالك اليوم؟"],
+];
+const PALETTE = ["#1f6feb", "#bf3989", "#1a7f37", "#9a6700", "#8250df", "#cf222e", "#0a7f88"];
+const BCP47 = { zh: "zh-CN", "hi-Latn": "hi-IN", "te-Latn": "te-IN" };
+let last = null, lastTranslation = null, timer = null, seq = 0;
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function el(tag, props = {}, ...children) {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const c of children) node.append(c);
+  return node;
+}
+
+async function detectNow() {
+  const text = $("text").value;
+  const id = ++seq;
+  $("stats").textContent = `${text.length} characters`;
+  if (!text.trim()) { $("result").hidden = true; $("empty").hidden = false; last = null; return; }
+  const a = await api("/api/analyze", { text });
+  if (id !== seq) return; // a newer request is on its way
+  last = a;
+  $("stats").textContent = `${a.stats.characters} characters · ${a.stats.words} words`;
+  if (a.best.code === "und") { $("result").hidden = true; $("empty").hidden = false; $("empty").textContent = "Keep typing… 🤔"; return; }
+  $("empty").hidden = true; $("result").hidden = false;
+  $("flag").textContent = a.best.flag;
+  $("name").textContent = a.best.name;
+  $("native").textContent = `${a.best.native} · ${a.best.code}`;
+  const pct = Math.round(a.best.confidence * 100);
+  $("ring").style.setProperty("--p", pct);
+  $("ringPct").textContent = pct + "%";
+  $("badges").replaceChildren(
+    el("span", { className: "badge" + (a.best.reliable ? "" : " warn"), textContent: a.best.reliable ? "Reliable" : "Low confidence — add more text" }),
+    ...(a.mixed ? [el("span", { className: "badge", textContent: "Mixed languages" })] : [])
+  );
+  $("bars").replaceChildren(...a.candidates.map((c) => {
+    const fill = el("div", { className: "fill" }); fill.style.width = (c.confidence * 100).toFixed(1) + "%";
+    return el("div", { className: "bar" },
+      el("span", { textContent: c.flag }),
+      el("div", { className: "label" }, el("span", { textContent: c.name }), el("div", { className: "track" }, fill)),
+      el("span", { className: "pct", textContent: (c.confidence * 100).toFixed(1) + "%" }));
+  }));
+  $("scripts").replaceChildren(...Object.entries(a.scripts).map(([s, p]) => el("span", { className: "chip", textContent: `${s} ${Math.round(p * 100)}%` })));
+  $("mixedBox").hidden = !a.mixed;
+  if (a.mixed) {
+    const colors = {};
+    $("segs").replaceChildren(...a.segments.map((s) => {
+      colors[s.code] ??= PALETTE[Object.keys(colors).length % PALETTE.length];
+      const span = el("span", { className: "seg" }, el("small", { textContent: `${s.flag} ${s.code}` }), s.text);
+      span.style.background = colors[s.code] + "22"; span.style.color = "inherit"; span.style.boxShadow = `inset 0 -2px 0 ${colors[s.code]}`;
+      return span;
+    }));
+  }
+}
+
+function scheduleDetect() { clearTimeout(timer); timer = setTimeout(() => detectNow().catch(console.error), 180); }
+
+async function doTranslate() {
+  const text = $("text").value.trim();
+  if (!text) return;
+  $("out").textContent = "Translating…"; $("outMeta").textContent = "";
+  try {
+    const t = await api("/api/translate", { text, target: $("target").value });
+    lastTranslation = t;
+    $("out").textContent = t.translated;
+    $("outMeta").textContent = `${t.source} → ${t.target} · via ${t.backend}`;
+  } catch (e) {
+    $("out").textContent = "😕 " + e.message + " (translation needs an internet connection)";
+  }
+}
+
+function speak() {
+  const t = lastTranslation;
+  if (!t || !("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance(t.translated);
+  u.lang = BCP47[t.target] || t.target;
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+
+// ---- quiz -------------------------------------------------------------
+const q = { score: 0, streak: 0, best: 0, current: null };
+async function nextQuestion() {
+  q.current = await api("/api/quiz");
+  $("qPhrase").textContent = `“${q.current.phrase}”`;
+  $("qMsg").textContent = "Which language is this?";
+  $("qNext").hidden = true;
+  $("qOpts").replaceChildren(...q.current.options.map((o) =>
+    el("button", { type: "button", textContent: `${o.flag}  ${o.name}`, onclick: (e) => answer(o.code, e.currentTarget) })));
+}
+function answer(code, btn) {
+  if (!$("qNext").hidden) return;
+  const right = code === q.current.answer;
+  for (const b of $("qOpts").children) {
+    const o = q.current.options[[...$("qOpts").children].indexOf(b)];
+    if (o.code === q.current.answer) b.classList.add("right");
+  }
+  if (!right) btn.classList.add("wrong");
+  q.streak = right ? q.streak + 1 : 0; q.score += right; q.best = Math.max(q.best, q.streak);
+  $("qScore").textContent = q.score; $("qStreak").textContent = q.streak; $("qBest").textContent = q.best;
+  $("qMsg").textContent = right ? (q.streak >= 3 ? "On fire! 🔥" : "Correct! 🎉") : "Not quite — the right answer is highlighted.";
+  $("qNext").hidden = false; $("qNext").focus();
+}
+
+// ---- wiring -----------------------------------------------------------
+$("text").addEventListener("input", scheduleDetect);
+$("clear").onclick = () => { $("text").value = ""; $("out").textContent = ""; $("outMeta").textContent = ""; scheduleDetect(); $("text").focus(); };
+$("translate").onclick = doTranslate;
+$("speak").onclick = speak;
+$("copy").onclick = () => lastTranslation && navigator.clipboard.writeText(lastTranslation.translated);
+$("qNext").onclick = nextQuestion;
+$("samples").replaceChildren(...SAMPLES.map(([label, text]) =>
+  el("button", { className: "chip", type: "button", textContent: label, onclick: () => { $("text").value = text; detectNow(); } })));
+document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+  $("tab-detect").hidden = b.dataset.tab !== "detect";
+  $("tab-quiz").hidden = b.dataset.tab !== "quiz";
+  if (b.dataset.tab === "quiz" && !q.current) nextQuestion();
+});
+api("/api/languages").then(({ languages }) => {
+  $("target").replaceChildren(...languages.map((l) => el("option", { value: l.code, textContent: `${l.flag} ${l.name}`, selected: l.code === "en" })));
+});
+</script>
+</body>
+</html>
